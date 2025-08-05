@@ -273,7 +273,7 @@ public class OAuth2Manager extends RefreshingAuthManager {
   }
 
   private static void warnIfDeprecatedTokenEndpointUsed(Map<String, String> properties) {
-    if (usesDeprecatedTokenEndpoint(properties)) {
+    if (!properties.containsKey(OAuth2Properties.OAUTH2_SERVER_URI)) {
       String credential = properties.get(OAuth2Properties.CREDENTIAL);
       String initToken = properties.get(OAuth2Properties.TOKEN);
       boolean hasCredential = credential != null && !credential.isEmpty();
@@ -281,12 +281,21 @@ public class OAuth2Manager extends RefreshingAuthManager {
       if (hasInitToken || hasCredential) {
         LOG.warn(
             "Iceberg REST client is missing the OAuth2 server URI configuration and defaults to {}/{}. "
-                + "This automatic fallback will be removed in a future Iceberg release."
+                + "This automatic fallback will be removed in a future Iceberg release. "
                 + "It is recommended to configure the OAuth2 endpoint using the '{}' property to be prepared. "
                 + "This warning will disappear if the OAuth2 endpoint is explicitly configured. "
                 + "See https://github.com/apache/iceberg/issues/10537",
             RESTUtil.stripTrailingSlash(properties.get(CatalogProperties.URI)),
             ResourcePaths.tokens(),
+            OAuth2Properties.OAUTH2_SERVER_URI);
+      }
+    } else {
+      String oauth2ServerUri = properties.get(OAuth2Properties.OAUTH2_SERVER_URI);
+      if (!oauth2ServerUri.startsWith("http") && oauth2ServerUri.endsWith(ResourcePaths.tokens())) {
+        LOG.warn(
+            "Iceberg REST client is configured to use the deprecated v1 tokens endpoint {}. "
+                + "This endpoint will be removed in a future Iceberg release. "
+                + "See https://github.com/apache/iceberg/issues/10537",
             OAuth2Properties.OAUTH2_SERVER_URI);
       }
     }
@@ -295,7 +304,8 @@ public class OAuth2Manager extends RefreshingAuthManager {
   private static boolean usesDeprecatedTokenEndpoint(Map<String, String> properties) {
     if (properties.containsKey(OAuth2Properties.OAUTH2_SERVER_URI)) {
       String oauth2ServerUri = properties.get(OAuth2Properties.OAUTH2_SERVER_URI);
-      boolean relativePath = !oauth2ServerUri.startsWith("http");
+      boolean relativePath =
+          !oauth2ServerUri.startsWith("http") && oauth2ServerUri.endsWith(ResourcePaths.tokens());
       boolean sameHost = oauth2ServerUri.startsWith(properties.get(CatalogProperties.URI));
       return relativePath || sameHost;
     }
