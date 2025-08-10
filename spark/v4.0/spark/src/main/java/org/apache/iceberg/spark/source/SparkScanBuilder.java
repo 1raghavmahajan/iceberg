@@ -71,6 +71,7 @@ import org.apache.spark.sql.connector.read.Scan;
 import org.apache.spark.sql.connector.read.ScanBuilder;
 import org.apache.spark.sql.connector.read.Statistics;
 import org.apache.spark.sql.connector.read.SupportsPushDownAggregates;
+import org.apache.spark.sql.connector.read.SupportsPushDownLimit;
 import org.apache.spark.sql.connector.read.SupportsPushDownRequiredColumns;
 import org.apache.spark.sql.connector.read.SupportsPushDownV2Filters;
 import org.apache.spark.sql.connector.read.SupportsReportStatistics;
@@ -85,7 +86,8 @@ public class SparkScanBuilder
         SupportsPushDownAggregates,
         SupportsPushDownV2Filters,
         SupportsPushDownRequiredColumns,
-        SupportsReportStatistics {
+        SupportsReportStatistics,
+        SupportsPushDownLimit {
 
   private static final Logger LOG = LoggerFactory.getLogger(SparkScanBuilder.class);
   private static final Predicate[] NO_PREDICATES = new Predicate[0];
@@ -103,6 +105,7 @@ public class SparkScanBuilder
   private boolean caseSensitive;
   private List<Expression> filterExpressions = null;
   private Predicate[] pushedPredicates = NO_PREDICATES;
+  private Integer pushedLimit = null;
 
   SparkScanBuilder(
       SparkSession spark,
@@ -278,8 +281,6 @@ public class SparkScanBuilder
     }
 
     // If group by expression is the same as the partition, the statistics information can still
-    // be used to calculate min/max/count, will enable aggregate push down in next phase.
-    // TODO: enable aggregate push down for partition col group by expression
     if (aggregation.groupByExpressions().length > 0) {
       LOG.info("Skipping aggregate pushdown: group by aggregation push down is not supported");
       return false;
@@ -396,6 +397,19 @@ public class SparkScanBuilder
   }
 
   @Override
+  public boolean pushLimit(int limit) {
+    // TODO: add configs and checks similar to canPushDownAggregation
+    this.pushedLimit = limit;
+    return true;
+  }
+
+  @Override
+  public boolean isPartiallyPushed() {
+    // Todo:
+    return true;
+  }
+
+  @Override
   public Scan build() {
     if (localScan != null) {
       return localScan;
@@ -476,6 +490,10 @@ public class SparkScanBuilder
             .filter(filterExpression())
             .project(expectedSchema)
             .metricsReporter(metricsReporter);
+
+    if (pushedLimit != null) {
+      scan = scan.limit(pushedLimit);
+    }
 
     if (withStats) {
       scan = scan.includeColumnStats();
@@ -666,6 +684,7 @@ public class SparkScanBuilder
             .useSnapshot(snapshotId)
             .caseSensitive(caseSensitive)
             .filter(filterExpression())
+                .limit(pushedLimit)
             .project(expectedSchema)
             .metricsReporter(metricsReporter);
 

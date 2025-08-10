@@ -61,6 +61,11 @@ public class DataTableScan extends BaseTableScan {
   }
 
   @Override
+  public TableScan limit(Integer limit) {
+    throw new UnsupportedOperationException(this.getClass().getName() + " doesn't implement limit");
+  }
+
+  @Override
   public CloseableIterable<FileScanTask> doPlanFiles() {
     Snapshot snapshot = snapshot();
 

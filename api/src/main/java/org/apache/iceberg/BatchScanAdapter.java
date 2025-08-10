@@ -104,6 +104,11 @@ class BatchScanAdapter implements BatchScan {
   }
 
   @Override
+  public BatchScan limit(Integer limit) {
+    return new BatchScanAdapter(scan.limit(limit));
+  }
+
+  @Override
   public BatchScan ignoreResiduals() {
     return new BatchScanAdapter(scan.ignoreResiduals());
   }

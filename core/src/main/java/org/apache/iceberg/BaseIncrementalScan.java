@@ -126,6 +126,11 @@ abstract class BaseIncrementalScan<ThisT, T extends ScanTask, G extends ScanTask
     return doPlanFiles(fromSnapshotIdExclusive, toSnapshotIdInclusive);
   }
 
+  @Override
+  public ThisT limit(Integer limit) {
+    throw new UnsupportedOperationException(this.getClass().getName() + " doesn't implement limit");
+  }
+
   private boolean scanCurrentLineage() {
     return context().fromSnapshotId() == null && context().toSnapshotId() == null;
   }

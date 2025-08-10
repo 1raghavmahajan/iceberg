@@ -380,5 +380,10 @@ public class PositionDeletesTable extends BaseMetadataTable {
                 return constructor.apply(spec);
               });
     }
+
+    @Override
+    public BatchScan limit(Integer limit) {
+      throw new UnsupportedOperationException(this.getClass().getName() + " doesn't implement limit");
+    }
   }
 }

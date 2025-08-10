@@ -58,6 +58,11 @@ abstract class BaseMetadataTableScan extends BaseTableScan {
   }
 
   @Override
+  public TableScan limit(Integer limit) {
+    throw new UnsupportedOperationException(this.getClass().getName() + " doesn't implement limit");
+  }
+
+  @Override
   public long targetSplitSize() {
     long tableValue =
         ((BaseTable) table())
